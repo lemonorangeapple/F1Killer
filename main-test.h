@@ -49,52 +49,43 @@ void ResumeProcess(DWORD process_id) {
     CloseHandle(hThreadSnapshot);
 }
 
-LRESULT CALLBACK HookProc(int nCode, WPARAM wParam, LPARAM lParam) {
-    return FALSE;
+LRESULT CALLBACK KeyboardHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    return CallNextHookEx(kbdHook, nCode, wParam, lParam);
 }
-
-DWORD WINAPI KeyHookThreadProc(LPVOID lpParameter) {
-    while (true) {
-        kbdHook = (HHOOK)SetWindowsHookEx(WH_KEYBOARD, (HOOKPROC)HookProc, GetModuleHandle(NULL), 0);
-        Sleep(50);
-        if (kbdHook != NULL) {
-            UnhookWindowsHookEx(kbdHook);
-        }
-    }
-    return 0;
-}
-
-DWORD WINAPI MouseHookThreadProc(LPVOID lpParameter) {
-    while (true) {
-        mseHook = (HHOOK)SetWindowsHookEx(WH_MOUSE, (HOOKPROC)HookProc, GetModuleHandle(NULL), 0);
-        ClipCursor(0);
-        Sleep(50);
-        if (mseHook != NULL) {
-            UnhookWindowsHookEx(mseHook);
-        }
-    }
-    return 0;
+LRESULT CALLBACK MouseHookProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    return CallNextHookEx(mseHook, nCode, wParam, lParam);
 }
 
 DWORD WINAPI KeyHookLLThreadProc(LPVOID lpParameter) {
-    while (true) {
-        kbdHook = (HHOOK)SetWindowsHookEx(WH_KEYBOARD_LL, (HOOKPROC)HookProc, GetModuleHandle(NULL), 0);
-        Sleep(50);
-        if (kbdHook != NULL) {
-            UnhookWindowsHookEx(kbdHook);
-        }
+    kbdHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardHookProc, GetModuleHandle(NULL), 0);
+    if (kbdHook == NULL) {
+        return 1;
+    }
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    if (kbdHook) {
+        UnhookWindowsHookEx(kbdHook);
+        kbdHook = NULL;
     }
     return 0;
 }
 
 DWORD WINAPI MouseHookLLThreadProc(LPVOID lpParameter) {
-    while (true) {
-        mseHook = (HHOOK)SetWindowsHookEx(WH_MOUSE_LL, (HOOKPROC)HookProc, GetModuleHandle(NULL), 0);
-        ClipCursor(0);
-        Sleep(50);
-        if (mseHook != NULL) {
-            UnhookWindowsHookEx(mseHook);
-        }
+    mseHook = SetWindowsHookEx(WH_MOUSE_LL, MouseHookProc, GetModuleHandle(NULL), 0);
+    if (mseHook == NULL) {
+        return 1;
+    }
+    MSG msg;
+    while (GetMessage(&msg, NULL, 0, 0)) {
+        TranslateMessage(&msg);
+        DispatchMessage(&msg);
+    }
+    if (mseHook) {
+        UnhookWindowsHookEx(mseHook);
+        mseHook = NULL;
     }
     return 0;
 }
